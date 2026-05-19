@@ -94,37 +94,36 @@ func (n *Natter) Run(ctx context.Context) {
 	n.logger.Info("bind ip decided", zap.String("bind_ip", n.bindIP.String()))
 	n.stunClient.SetBindIP(n.bindIP)
 
-	// UPnP port mapping if enabled
-	if n.cfg.EnableUPnP {
-		cli, err := upnp.Discover(n.logger)
-		if err != nil {
-			n.logger.Warn("UPnP discovery failed", zap.Error(err))
-		} else {
-			for _, addr := range n.tcpOpens {
-				// Determine actual inner IP (replace 0.0.0.0)
-				innerIP := addr.IP.String()
-				if addr.IP.IsUnspecified() {
-					innerIP = n.getOutboundIP().String()
-				}
-				// Add UPnP mapping: external and internal ports are the same
-				if err := cli.AddTCP(addr.Port, addr.Port, innerIP, 0); err != nil {
-					n.logger.Warn("UPnP AddTCP failed", zap.Int("port", addr.Port), zap.Error(err))
-				} else {
-					n.logger.Info("UPnP TCP map added", zap.String("inner", fmt.Sprintf("%s:%d", innerIP, addr.Port)), zap.Int("port", addr.Port))
-				}
+	// Always try UPnP once on startup. If the router does not expose IGD or UPnP
+	// is disabled, discovery simply fails and the main workflow continues.
+	cli, err := upnp.Discover(n.logger)
+	if err != nil {
+		n.logger.Info("UPnP unavailable, skipping automatic port mapping", zap.Error(err))
+	} else {
+		for _, addr := range n.tcpOpens {
+			// Determine actual inner IP (replace 0.0.0.0)
+			innerIP := addr.IP.String()
+			if addr.IP.IsUnspecified() {
+				innerIP = n.getOutboundIP().String()
 			}
-			for _, addr := range n.udpOpens {
-				// Determine actual inner IP (replace 0.0.0.0)
-				innerIP := addr.IP.String()
-				if addr.IP.IsUnspecified() {
-					innerIP = n.getOutboundIP().String()
-				}
-				// Add UPnP mapping for UDP
-				if err := cli.AddUDP(addr.Port, addr.Port, innerIP, 0); err != nil {
-					n.logger.Warn("UPnP AddUDP failed", zap.Int("port", addr.Port), zap.Error(err))
-				} else {
-					n.logger.Info("UPnP UDP map added", zap.String("inner", fmt.Sprintf("%s:%d", innerIP, addr.Port)), zap.Int("port", addr.Port))
-				}
+			// Add UPnP mapping: external and internal ports are the same
+			if err := cli.AddTCP(addr.Port, addr.Port, innerIP, 0); err != nil {
+				n.logger.Warn("UPnP AddTCP failed", zap.Int("port", addr.Port), zap.Error(err))
+			} else {
+				n.logger.Info("UPnP TCP map added", zap.String("inner", fmt.Sprintf("%s:%d", innerIP, addr.Port)), zap.Int("port", addr.Port))
+			}
+		}
+		for _, addr := range n.udpOpens {
+			// Determine actual inner IP (replace 0.0.0.0)
+			innerIP := addr.IP.String()
+			if addr.IP.IsUnspecified() {
+				innerIP = n.getOutboundIP().String()
+			}
+			// Add UPnP mapping for UDP
+			if err := cli.AddUDP(addr.Port, addr.Port, innerIP, 0); err != nil {
+				n.logger.Warn("UPnP AddUDP failed", zap.Int("port", addr.Port), zap.Error(err))
+			} else {
+				n.logger.Info("UPnP UDP map added", zap.String("inner", fmt.Sprintf("%s:%d", innerIP, addr.Port)), zap.Int("port", addr.Port))
 			}
 		}
 	}

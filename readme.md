@@ -95,7 +95,7 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -gcflags="all=-t
 
 ```powershell
 ./natter.exe -c config.json  
-#路由器需要开启upnp,config中设置 "enable_upnp":true
+#路由器如果开启了 UPnP，会在启动时自动探测并尝试映射
 #windows不支持端口复用
 ```
 
