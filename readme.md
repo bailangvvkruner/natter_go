@@ -28,7 +28,7 @@
 ### 1. 克隆代码
 
 ```bash
-git clone https://github.com/H1W0XXX/natter_go
+git clone --depth 1 https://github.com/H1W0XXX/natter_go
 cd natter-go
 ```
 
